@@ -6,8 +6,6 @@ import torch
 import os
 import json
 from datetime import datetime
-from flask_socketio import emit
-from socket_instance import socketio
 
 training_bp = Blueprint('training', __name__)
 
@@ -31,19 +29,16 @@ class TrainingCallback:
         self.current_epoch = epoch
         self.current_loss = logs.get('loss', 0.0) if logs else 0.0
         
-        # Emit training progress
-        socketio.emit('training_progress', {
-            'epoch': self.current_epoch,
-            'total_epochs': self.total_epochs,
-            'loss': self.current_loss,
-            'timestamp': datetime.now().isoformat()
+        # Update training state
+        training_state.update({
+            'current_epoch': self.current_epoch,
+            'current_loss': self.current_loss
         })
 
     def on_train_end(self, logs=None):
-        socketio.emit('training_complete', {
-            'final_loss': self.current_loss,
-            'total_epochs': self.total_epochs,
-            'end_time': datetime.now().isoformat()
+        training_state.update({
+            'is_training': False,
+            'end_time': datetime.now()
         })
 
 @training_bp.route('/config', methods=['POST'])
@@ -157,12 +152,6 @@ def start_finetune():
             'start_time': datetime.now()
         })
         
-        # Emit training start event
-        socketio.emit('training_start', {
-            'config': config,
-            'start_time': training_state['start_time'].isoformat()
-        })
-        
         # Start training in background
         trainer.train()
         
@@ -179,10 +168,6 @@ def start_finetune():
         
     except Exception as e:
         training_state['is_training'] = False
-        socketio.emit('training_error', {
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        })
         return jsonify({'error': f'Error starting training: {str(e)}'}), 400
 
 @training_bp.route('/training_status', methods=['GET'])

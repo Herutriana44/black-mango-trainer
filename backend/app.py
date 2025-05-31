@@ -7,62 +7,47 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-from socket_instance import socketio
 
 # Load environment variables
 load_dotenv()
 
-# Initialize Flask app
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+def create_app():
+    # Initialize Flask app
+    app = Flask(__name__)
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Initialize Socket.IO with the app
-socketio.init_app(app)
+    # Configuration
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+    app.config['UPLOAD_FOLDER'] = 'uploads'
+    app.config['MODEL_CACHE'] = 'model_cache'
 
-# Configuration
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MODEL_CACHE'] = 'model_cache'
+    # Create necessary directories
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['MODEL_CACHE'], exist_ok=True)
 
-# Create necessary directories
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['MODEL_CACHE'], exist_ok=True)
+    # Import routes
+    from routes.upload import upload_bp
+    from routes.model import model_bp
+    from routes.training import training_bp
+    from routes.monitor import monitor_bp
+    from routes.export import export_bp
 
-# Import routes
-from routes.upload import upload_bp
-from routes.model import model_bp
-from routes.training import training_bp
-from routes.monitor import monitor_bp
-from routes.export import export_bp
+    # Register blueprints
+    app.register_blueprint(upload_bp, url_prefix='/api')
+    app.register_blueprint(model_bp, url_prefix='/api')
+    app.register_blueprint(training_bp, url_prefix='/api')
+    app.register_blueprint(monitor_bp, url_prefix='/api')
+    app.register_blueprint(export_bp, url_prefix='/api')
 
-# Register blueprints
-app.register_blueprint(upload_bp, url_prefix='/api')
-app.register_blueprint(model_bp, url_prefix='/api')
-app.register_blueprint(training_bp, url_prefix='/api')
-app.register_blueprint(monitor_bp, url_prefix='/api')
-app.register_blueprint(export_bp, url_prefix='/api')
+    @app.route('/api/health')
+    def health_check():
+        return jsonify({
+            'status': 'healthy',
+            'message': 'Flask backend is running'
+        })
 
-# Socket.IO event handlers
-@socketio.on('connect')
-def handle_connect():
-    print('Client connected')
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    print('Client disconnected')
-
-@socketio.on('subscribe_training')
-def handle_subscribe_training(data):
-    print(f'Client subscribed to training updates: {data}')
-
-@app.route('/api/health')
-def health_check():
-    return jsonify({
-        'status': 'healthy',
-        'message': 'Flask backend is running'
-    })
+    return app
 
 if __name__ == '__main__':
-    import eventlet
-    eventlet.monkey_patch()
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True) 
+    app = create_app()
+    app.run(host='0.0.0.0', port=5000, debug=True) 
