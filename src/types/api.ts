@@ -1,6 +1,6 @@
 export interface HealthResponse {
     status: string;
-    message: string;
+    version: string;
 }
 
 export interface UploadResponse {
@@ -12,7 +12,17 @@ export interface UploadResponse {
 export interface TrainingConfig {
     modelType: string;
     epochs: number;
-    [key: string]: any;
+    batchSize: number;
+    learningRate: number;
+    maxGradNorm: number;
+    warmupRatio: number;
+    loggingSteps: number;
+    validationSplit: number;
+    finetuneType: 'lora' | 'qlora' | 'full';
+    loraR?: number;
+    loraAlpha?: number;
+    loraDropout?: number;
+    targetModules?: string[];
 }
 
 export interface TrainingResponse {
@@ -22,14 +32,13 @@ export interface TrainingResponse {
 }
 
 export interface TrainingStatus {
-    status: 'pending' | 'running' | 'completed' | 'failed';
+    status: 'idle' | 'running' | 'completed' | 'failed';
     progress: number;
     currentEpoch: number;
     totalEpochs: number;
+    message?: string;
     metrics?: {
         loss: number;
         accuracy: number;
-        [key: string]: number;
     };
-    message?: string;
 } 

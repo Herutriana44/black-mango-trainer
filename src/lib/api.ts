@@ -5,9 +5,9 @@ import {
     TrainingConfig,
     TrainingResponse,
     TrainingStatus,
-} from '@/types/api';
+} from '../types/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -17,33 +17,30 @@ const api = axios.create({
 });
 
 // Health check
-export const checkHealth = async (): Promise<HealthResponse> => {
-    try {
-        const response = await api.get<HealthResponse>('/health');
-        return response.data;
-    } catch (error) {
-        console.error('Health check failed:', error);
-        throw error;
+export async function checkHealth(): Promise<HealthResponse> {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    if (!response.ok) {
+        throw new Error('Health check failed');
     }
-};
+    return response.json();
+}
 
 // Upload related functions
-export const uploadFile = async (file: File): Promise<UploadResponse> => {
+export async function uploadFile(file: File): Promise<{ message: string }> {
     const formData = new FormData();
     formData.append('file', file);
 
-    try {
-        const response = await api.post<UploadResponse>('/upload', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
-        return response.data;
-    } catch (error) {
-        console.error('File upload failed:', error);
-        throw error;
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!response.ok) {
+        throw new Error('Upload failed');
     }
-};
+
+    return response.json();
+}
 
 // Model related functions
 export const getModels = async () => {
@@ -57,26 +54,30 @@ export const getModels = async () => {
 };
 
 // Training related functions
-export const startTraining = async (config: TrainingConfig): Promise<TrainingResponse> => {
-    try {
-        const response = await api.post<TrainingResponse>('/training/start', config);
-        return response.data;
-    } catch (error) {
-        console.error('Failed to start training:', error);
-        throw error;
+export async function startTraining(config: TrainingConfig): Promise<{ trainingId: string }> {
+    const response = await fetch(`${API_BASE_URL}/train`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to start training');
     }
-};
+
+    return response.json();
+}
 
 // Monitor related functions
-export const getTrainingStatus = async (trainingId: string): Promise<TrainingStatus> => {
-    try {
-        const response = await api.get<TrainingStatus>(`/monitor/${trainingId}`);
-        return response.data;
-    } catch (error) {
-        console.error('Failed to get training status:', error);
-        throw error;
+export async function getTrainingStatus(trainingId: string): Promise<TrainingStatus> {
+    const response = await fetch(`${API_BASE_URL}/training/${trainingId}/status`);
+    if (!response.ok) {
+        throw new Error('Failed to get training status');
     }
-};
+    return response.json();
+}
 
 // Export related functions
 export const exportModel = async (modelId: string) => {

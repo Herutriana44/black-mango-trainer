@@ -1,46 +1,21 @@
 import { useEffect, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { TrainingStatus } from '../types/api';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000';
+type TrainingUpdateCallback = (data: TrainingStatus) => void;
 
-export const useWebSocket = () => {
-    let socket: Socket | null = null;
-
-    useEffect(() => {
-        // Initialize socket connection
-        socket = io(SOCKET_URL);
-
-        // Connection event handlers
-        socket.on('connect', () => {
-            console.log('Connected to WebSocket server');
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Disconnected from WebSocket server');
-        });
-
-        // Cleanup on unmount
-        return () => {
-            if (socket) {
-                socket.disconnect();
-            }
-        };
-    }, []);
-
+export function useWebSocket() {
     const subscribeToTraining = useCallback((trainingId: string) => {
-        if (socket) {
-            socket.emit('subscribe_training', { trainingId });
-        }
+        // TODO: Implement WebSocket connection
+        console.log('Subscribing to training updates:', trainingId);
     }, []);
 
-    const onTrainingUpdate = useCallback((callback: (data: any) => void) => {
-        if (socket) {
-            socket.on('training_update', callback);
-        }
+    const onTrainingUpdate = useCallback((callback: TrainingUpdateCallback) => {
+        // TODO: Implement WebSocket event listener
+        console.log('Setting up training update callback');
     }, []);
 
     return {
         subscribeToTraining,
         onTrainingUpdate,
     };
-}; 
+} 

@@ -1,15 +1,14 @@
 "use client"
-
 import { useState, useEffect } from "react"
-import { Sidebar } from "@/components/sidebar"
-import { UploadDataset } from "@/components/upload-dataset"
-import { ModelTraining } from "@/components/model-training"
-import { MonitorTraining } from "@/components/monitor-training"
-import { ExportDeploy } from "@/components/export-deploy"
-import { ChatbotInterface } from "@/components/chatbot-interface"
-import { checkHealth, uploadFile, startTraining, getTrainingStatus } from '@/lib/api'
-import { useWebSocket } from '@/hooks/useWebSocket'
-import { HealthResponse, TrainingStatus } from '@/types/api'
+import { Sidebar } from "../components/sidebar"
+import { UploadDataset } from "../components/upload-dataset"
+import { FineTuningSettings } from "../components/finetuning-settings"
+import { Monitoring } from "../components/monitoring"
+import { ExportDeploy } from "../components/export-deploy"
+import { ChatbotInterface } from "../components/chatbot-interface"
+import { checkHealth, uploadFile, startTraining, getTrainingStatus } from '../src/lib/api'
+import { useWebSocket } from '../src/hooks/useWebSocket'
+import { HealthResponse, TrainingStatus } from '../src/types/api'
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("upload")
@@ -47,9 +46,19 @@ export default function Home() {
   const handleStartTraining = async () => {
     try {
       const response = await startTraining({
-        // Add your training configuration here
         modelType: "default",
         epochs: 10,
+        batchSize: 4,
+        learningRate: 2e-4,
+        maxGradNorm: 0.3,
+        warmupRatio: 0.03,
+        loggingSteps: 10,
+        validationSplit: 0.1,
+        finetuneType: "lora",
+        loraR: 16,
+        loraAlpha: 32,
+        loraDropout: 0.05,
+        targetModules: ["q_proj", "v_proj"]
       })
       console.log("Training started:", response)
 
@@ -70,9 +79,9 @@ export default function Home() {
       case "upload":
         return <UploadDataset />
       case "training":
-        return <ModelTraining />
+        return <FineTuningSettings />
       case "monitor":
-        return <MonitorTraining />
+        return <Monitoring />
       case "export":
         return <ExportDeploy />
       case "chatbot":
