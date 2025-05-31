@@ -1,8 +1,8 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-from flask_socketio import SocketIO
 import os
 from dotenv import load_dotenv
+from socket_instance import socketio
 
 # Load environment variables
 load_dotenv()
@@ -11,8 +11,8 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Initialize Socket.IO with CORS support
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+# Initialize Socket.IO with the app
+socketio.init_app(app)
 
 # Configuration
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size

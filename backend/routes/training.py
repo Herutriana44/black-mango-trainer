@@ -7,7 +7,7 @@ import os
 import json
 from datetime import datetime
 from flask_socketio import emit
-from app import socketio
+from ..socket_instance import socketio
 
 training_bp = Blueprint('training', __name__)
 
