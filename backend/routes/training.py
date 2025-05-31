@@ -6,6 +6,8 @@ import torch
 import os
 import json
 from datetime import datetime
+from flask_socketio import emit
+from app import socketio
 
 training_bp = Blueprint('training', __name__)
 
@@ -18,6 +20,31 @@ training_state = {
     'start_time': None,
     'end_time': None
 }
+
+class TrainingCallback:
+    def __init__(self):
+        self.current_epoch = 0
+        self.total_epochs = 0
+        self.current_loss = 0.0
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.current_epoch = epoch
+        self.current_loss = logs.get('loss', 0.0) if logs else 0.0
+        
+        # Emit training progress
+        socketio.emit('training_progress', {
+            'epoch': self.current_epoch,
+            'total_epochs': self.total_epochs,
+            'loss': self.current_loss,
+            'timestamp': datetime.now().isoformat()
+        })
+
+    def on_train_end(self, logs=None):
+        socketio.emit('training_complete', {
+            'final_loss': self.current_loss,
+            'total_epochs': self.total_epochs,
+            'end_time': datetime.now().isoformat()
+        })
 
 @training_bp.route('/config', methods=['POST'])
 def set_training_config():
@@ -69,6 +96,10 @@ def start_finetune():
             evaluation_strategy="epoch" if config.get('validation_split', 0) > 0 else "no",
         )
         
+        # Initialize callback
+        callback = TrainingCallback()
+        callback.total_epochs = config.get('epochs', 3)
+        
         # Prepare model based on fine-tuning type
         if config.get('finetune_type') == 'lora':
             lora_config = LoraConfig(
@@ -114,7 +145,8 @@ def start_finetune():
             model=model,
             args=training_args,
             train_dataset=dataset,
-            tokenizer=current_tokenizer
+            tokenizer=current_tokenizer,
+            callbacks=[callback]
         )
         
         # Update training state
@@ -123,6 +155,12 @@ def start_finetune():
             'current_epoch': 0,
             'total_epochs': config.get('epochs', 3),
             'start_time': datetime.now()
+        })
+        
+        # Emit training start event
+        socketio.emit('training_start', {
+            'config': config,
+            'start_time': training_state['start_time'].isoformat()
         })
         
         # Start training in background
@@ -141,6 +179,10 @@ def start_finetune():
         
     except Exception as e:
         training_state['is_training'] = False
+        socketio.emit('training_error', {
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        })
         return jsonify({'error': f'Error starting training: {str(e)}'}), 400
 
 @training_bp.route('/training_status', methods=['GET'])
