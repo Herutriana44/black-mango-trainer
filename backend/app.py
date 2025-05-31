@@ -1,6 +1,11 @@
+import os
+import sys
+
+# Add the backend directory to Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask import Flask, jsonify
 from flask_cors import CORS
-import os
 from dotenv import load_dotenv
 from socket_instance import socketio
 
